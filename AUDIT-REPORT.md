@@ -58,7 +58,7 @@ Export: cart-validations-generate-run
 
 1. **Receives cart data** during checkout (from Shopify)
 2. **Scans all line items** in the cart
-3. **Filters for target product:** `mr-henrycherries-2kg`
+3. **Filters for target product:** `mr-henry-cherries-2kg`
 4. **Collects variant IDs** for that product into a Set
 5. **Checks if Set.size > 1** (multiple delivery dates detected)
 6. **If yes:** Returns validation error
@@ -67,8 +67,8 @@ Export: cart-validations-generate-run
 **Logic Flow:**
 ```javascript
 Input Cart:
-  Line 1: mr-henrycherries-2kg, variant: gid://...123 (Dec 15)
-  Line 2: mr-henrycherries-2kg, variant: gid://...456 (Dec 22)
+  Line 1: mr-henry-cherries-2kg, variant: gid://...123 (Dec 15)
+  Line 2: mr-henry-cherries-2kg, variant: gid://...456 (Dec 22)
 
 ↓
 
@@ -166,14 +166,14 @@ When a customer tries to checkout with:
 
 **Result:**
 - Checkout is **blocked**
-- Error message displayed: *"You can only order one delivery date at a time. Please remove extra dates from your cart or place separate orders for each delivery date."*
+- Error message displayed: *"You can only order 1 delivery date at a time. Please remove undesired dates from your cart or place separate orders for different delivery dates."*
 - Customer **must** remove one variant to proceed
 
 ### ✅ Allows Valid Checkouts
 
 - Single variant: ✅ Allowed
 - Multiple quantities of same variant: ✅ Allowed
-- Different products: ✅ Allowed (only checks `mr-henrycherries-2kg`)
+- Different products: ✅ Allowed (only checks `mr-henry-cherries-2kg`)
 
 ### ✅ Server-Side Enforcement
 
@@ -224,7 +224,7 @@ It only **validates** and **blocks** checkout if rules are violated.
 ### Current Settings
 
 ```javascript
-TARGET_PRODUCT_HANDLE = "mr-henrycherries-2kg"
+TARGET_PRODUCT_HANDLE = "mr-henry-cherries-2kg"
 ```
 
 **To change:**
@@ -293,7 +293,7 @@ TARGET_PRODUCT_HANDLE = "mr-henrycherries-2kg"
 
 ### Intentional Limitations
 
-1. **Only checks one product:** `mr-henrycherries-2kg`
+1. **Only checks one product:** `mr-henry-cherries-2kg`
    - Other products unaffected
    - Easy to change in code
 
@@ -377,16 +377,18 @@ Once deployed:
 
 ## Recommendation
 
-**STATUS: READY FOR DEPLOYMENT** ✅
+**STATUS: DEPLOYED - REQUIRES ACTIVATION** ⚠️
 
-The app is correctly implemented and tested. The only remaining steps are:
+The app is correctly implemented and tested. **CRITICAL NEXT STEPS:**
 
-1. Complete public distribution setup in Partner Dashboard
-2. Wait for Shopify approval
-3. Install on target store
-4. Activate function in Checkout settings
+1. ✅ Installed on dev store
+2. ⚠️ **MUST MANUALLY ACTIVATE** in Settings → Checkout → Checkout validations
+3. ⚠️ **VERIFY PRODUCT HANDLE** matches exactly: `mr-henry-cherries-2kg`
+4. ⚠️ **VERIFY CHECKOUT TYPE** - requires new Checkout Extensibility architecture
 
-The code itself is production-ready and will work as intended once distribution is approved.
+**Troubleshooting:** See TROUBLESHOOTING.md for detailed debugging steps
+
+The code itself is production-ready. If validation isn't working, it's likely a configuration issue, not a code issue.
 
 ---
 

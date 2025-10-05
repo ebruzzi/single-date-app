@@ -20,7 +20,7 @@ Delivery date is represented as a product variant (each variant = a specific dat
 
 **The Solution:**custom.js module SingleDeliveryDateEnforcer:
 
-Server-side checkout validation that blocks orders with multiple delivery date variants.Blocks adding a second variant (different date) of the target product handle (currently mr-henrycherries-2kg).
+Server-side checkout validation that blocks orders with multiple delivery date variants.Blocks adding a second variant (different date) of the target product handle (currently mr-henry-cherries-2kg).
 
 Adds cart warning + disables checkout buttons if a conflict is detected.
 
@@ -40,7 +40,7 @@ Not active because the repo is a pure theme—Shopify Functions only run inside 
 
 - Runs during checkout on Shopify's servers (server-side)Add server-side enforcement so mixed-date carts are impossible:
 
-- Checks cart for multiple variants of the target product (`mr-henrycherries-2kg`)
+- Checks cart for multiple variants of the target product (`mr-henry-cherries-2kg`)
 
 - **Blocks checkout** with error message if violations detectedCart Transform Function: silently keeps only one variant (first or last strategy).
 
@@ -80,7 +80,7 @@ C. Theme JS + Validation Function (explicit error, no silent changes).
 
 - **Distribution:** Public (Unlisted) - works on all Shopify plans
 
-- **Target Product:** `mr-henrycherries-2kg`Node.js (LTS) – e.g. v18 or v20 (Shopify CLI supports active LTS).
+- **Target Product:** `mr-henry-cherries-2kg`Node.js (LTS) – e.g. v18 or v20 (Shopify CLI supports active LTS).
 
 Git installed & on PATH.
 
@@ -178,9 +178,9 @@ input: {Add variant A to cart.
 
     lines: [Refresh cart → only variant A should remain.
 
-      { merchandise: { id: "variant-123", product: { handle: "mr-henrycherries-2kg" } } },If the function isn’t running:
+      { merchandise: { id: "variant-123", product: { handle: "mr-henry-cherries-2kg" } } },If the function isn’t running:
 
-      { merchandise: { id: "variant-456", product: { handle: "mr-henrycherries-2kg" } } }
+      { merchandise: { id: "variant-456", product: { handle: "mr-henry-cherries-2kg" } } }
 
     ]Verify extension appears under “Functions” in output.
 
@@ -368,7 +368,7 @@ Edit `extensions/cart-checkout-validation/src/cart_validations_generate_run.js`:
 
 ```javascript
 // Line 9
-const TARGET_PRODUCT_HANDLE = "mr-henrycherries-2kg";  // ← Change this
+const TARGET_PRODUCT_HANDLE = "mr-henry-cherries-2kg";  // ← Change this
 ```
 
 Then rebuild and redeploy:
@@ -437,7 +437,7 @@ Server-side validation = unbypassable backstop.
 
 **Debug steps:**
 1. Check function is **enabled** in Checkout settings
-2. Verify product handle matches exactly (`mr-henrycherries-2kg`)
+2. Verify product handle matches exactly (`mr-henry-cherries-2kg`)
 3. Test with actual product variants (not test products)
 4. Check browser console for GraphQL errors
 

@@ -16,7 +16,7 @@ describe('cart checkout validation function', () => {
               __typename: "ProductVariant",
               id: "gid://shopify/ProductVariant/123",
               product: {
-                handle: "mr-henrycherries-2kg"
+                handle: "mr-henry-cherries-2kg"
               }
             }
           },
@@ -26,7 +26,7 @@ describe('cart checkout validation function', () => {
               __typename: "ProductVariant",
               id: "gid://shopify/ProductVariant/456",
               product: {
-                handle: "mr-henrycherries-2kg"
+                handle: "mr-henry-cherries-2kg"
               }
             }
           }
@@ -39,7 +39,7 @@ describe('cart checkout validation function', () => {
           validationAdd: {
             errors: [
               {
-                message: "You can only order one delivery date at a time. Please remove extra dates from your cart or place separate orders for each delivery date.",
+                message: "You can only order 1 delivery date at a time. Please remove undesired dates from your cart or place separate orders for different delivery dates.",
                 target: "$.cart"
               }
             ]
@@ -61,7 +61,7 @@ describe('cart checkout validation function', () => {
               __typename: "ProductVariant",
               id: "gid://shopify/ProductVariant/123",
               product: {
-                handle: "mr-henrycherries-2kg"
+                handle: "mr-henry-cherries-2kg"
               }
             }
           }
@@ -69,13 +69,7 @@ describe('cart checkout validation function', () => {
       }
     });
     const expected = /** @type {CartValidationsGenerateRunResult} */ ({
-      operations: [
-        {
-          validationAdd: {
-            errors: []
-          }
-        }
-      ]
+      operations: []
     });
 
     expect(result).toEqual(expected);
@@ -109,13 +103,7 @@ describe('cart checkout validation function', () => {
       }
     });
     const expected = /** @type {CartValidationsGenerateRunResult} */ ({
-      operations: [
-        {
-          validationAdd: {
-            errors: []
-          }
-        }
-      ]
+      operations: []
     });
 
     expect(result).toEqual(expected);
@@ -128,13 +116,7 @@ describe('cart checkout validation function', () => {
       }
     });
     const expected = /** @type {CartValidationsGenerateRunResult} */ ({
-      operations: [
-        {
-          validationAdd: {
-            errors: []
-          }
-        }
-      ]
+      operations: []
     });
 
     expect(result).toEqual(expected);
