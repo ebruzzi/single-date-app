@@ -1,0 +1,4 @@
+{
+  "name": "Single Delivery Date Validation",
+  "description": "Prevents checkout when multiple delivery date variants are in the cart"
+}
