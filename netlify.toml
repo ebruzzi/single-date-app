@@ -1,0 +1,10 @@
+# Netlify Configuration
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+# Redirect rules
+[[redirects]]
+  from = "/webhooks/gdpr/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
