@@ -1,167 +1,535 @@
-Single Delivery Date Enforcement – Full Technical Brief (Windows 11 / VS Code)
+# Single Delivery Date Validator - Shopify AppSingle Delivery Date Enforcement – Full Technical Brief (Windows 11 / VS Code)
+
 1. Business Context (Why This Exists)
-Store sells exactly one product: a 2kg box of cherries.
+
+## Business ContextStore sells exactly one product: a 2kg box of cherries.
+
 Delivery date is represented as a product variant (each variant = a specific date).
-Operational rule: A customer must not check out with multiple different delivery date variants in one order (they must place separate orders per date).
-Inventory per date is controlled by variant stock. We need hard prevention of “mixed date” carts, not just a warning.
 
-2. Current State (Theme Only)
-Already implemented in the theme (front‑end only / bypassable):
+**The Problem:**Operational rule: A customer must not check out with multiple different delivery date variants in one order (they must place separate orders per date).
 
-custom.js module SingleDeliveryDateEnforcer:
-Blocks adding a second variant (different date) of the target product handle (currently mr-henrycherries-2kg).
+- Store sells cherries with delivery dates as product variantsInventory per date is controlled by variant stock. We need hard prevention of “mixed date” carts, not just a warning.
+
+- Each variant = a specific delivery date
+
+- **Business Rule:** Customers must order only ONE delivery date per checkout2. Current State (Theme Only)
+
+- Multiple dates = fulfillment chaos and inventory issuesAlready implemented in the theme (front‑end only / bypassable):
+
+
+
+**The Solution:**custom.js module SingleDeliveryDateEnforcer:
+
+Server-side checkout validation that blocks orders with multiple delivery date variants.Blocks adding a second variant (different date) of the target product handle (currently mr-henrycherries-2kg).
+
 Adds cart warning + disables checkout buttons if a conflict is detected.
-Still bypassable (DevTools edits, direct /cart/add.js calls, Storefront API).
+
+---Still bypassable (DevTools edits, direct /cart/add.js calls, Storefront API).
+
 Already created but INERT:
 
+## Architecture
+
 Folder: single-delivery-date-cart-transform
-Contains a cart_transform function scaffold (JS runtime) that would prune extra variants.
+
+### What This App DoesContains a cart_transform function scaffold (JS runtime) that would prune extra variants.
+
 Not active because the repo is a pure theme—Shopify Functions only run inside an APP project.
-3. Goal
-Add server-side enforcement so mixed-date carts are impossible:
 
-Cart Transform Function: silently keeps only one variant (first or last strategy).
-(Optional) Validation Function: outright rejects checkout with a clear error instead of mutating the cart. (You can implement later.)
+**Checkout Validation Function** (`purchase.validation.run`):3. Goal
+
+- Runs during checkout on Shopify's servers (server-side)Add server-side enforcement so mixed-date carts are impossible:
+
+- Checks cart for multiple variants of the target product (`mr-henrycherries-2kg`)
+
+- **Blocks checkout** with error message if violations detectedCart Transform Function: silently keeps only one variant (first or last strategy).
+
+- Cannot be bypassed by browser manipulation or API calls(Optional) Validation Function: outright rejects checkout with a clear error instead of mutating the cart. (You can implement later.)
+
 4. Important Distinction
-Aspect	Theme	App (with Functions)
+
+### What This App Does NOT DoAspect	Theme	App (with Functions)
+
 Runs in buyer browser	Yes	Partly (embedded scripts)
-Server-side cart mutation or checkout blocking	No	Yes (Functions)
-Needs deployment & CLI link to a Shopify app	No	Yes
-Can be bypassed by API clients	Yes	Much harder (unless alternative APIs used deliberately)
-5. Paths You Can Choose
+
+- ❌ No admin UI (pure function app)Server-side cart mutation or checkout blocking	No	Yes (Functions)
+
+- ❌ No cart transformation (doesn't silently remove items)Needs deployment & CLI link to a Shopify app	No	Yes
+
+- ❌ No data collection or storageCan be bypassed by API clients	Yes	Much harder (unless alternative APIs used deliberately)
+
+- ❌ No API scopes required5. Paths You Can Choose
+
 A. Keep only theme JS (already done) – low effort, weakest enforcement.
-B. Theme JS + Cart Transform Function (silent correction).
+
+---B. Theme JS + Cart Transform Function (silent correction).
+
 C. Theme JS + Validation Function (explicit error, no silent changes).
-D. Combine Transform (auto-correct) + Validation (backstop) – strongest.
 
-Recommended: Start with B (fast) then add C.
+## Technical StackD. Combine Transform (auto-correct) + Validation (backstop) – strongest.
 
-6. Tooling & Environment (Windows 11)
-Prerequisites:
 
-Node.js (LTS) – e.g. v18 or v20 (Shopify CLI supports active LTS).
+
+- **Platform:** Shopify Functions APIRecommended: Start with B (fast) then add C.
+
+- **Function Type:** Checkout Validation (`purchase.validation.run`)
+
+- **Runtime:** JavaScript (compiled to WASM via Javy)6. Tooling & Environment (Windows 11)
+
+- **API Version:** `2025-01`Prerequisites:
+
+- **Distribution:** Public (Unlisted) - works on all Shopify plans
+
+- **Target Product:** `mr-henrycherries-2kg`Node.js (LTS) – e.g. v18 or v20 (Shopify CLI supports active LTS).
+
 Git installed & on PATH.
-Shopify CLI (latest) installed (MSI or npm i -g @shopify/cli @shopify/app).
+
+---Shopify CLI (latest) installed (MSI or npm i -g @shopify/cli @shopify/app).
+
 (Optional) Rust WASM toolchain NOT needed if using JavaScript runtime for Functions (what we’re doing). Older docs often reference Rust; we’re bypassing that by using JS runtime extensions.
-Your Shopify partner account or store staff account with permissions; store in “development” or you have app dev rights.
+
+## Project StructureYour Shopify partner account or store staff account with permissions; store in “development” or you have app dev rights.
+
 Check versions:
 
-7. High-Level Architecture for Enforcement App
-Minimal custom app with:
+```
 
-/ app root (generated by CLI: Node or “empty” template).
-single-delivery-date-cart-transform (move or recreate here).
-(Later) /extensions/single-delivery-date-validation/ (order or checkout validation).
-No need for UI, OAuth scopes minimal (Functions do not need write_products or similar unless you later add config UI).
-8. Clean-Up Before Starting
-In the theme repository right now, single-delivery-date-cart-transform is orphaned. Decide:
+single-date-app/7. High-Level Architecture for Enforcement App
 
-Option 1 (Recommended): Move that folder into a newly generated app project (outside the theme repo) and remove it from the theme repo to avoid confusion.
-Option 2: Convert your current repo into a hybrid (theme + app). Not advised unless you want monorepo style.
+├── extensions/Minimal custom app with:
 
-9. Step-by-Step: Create & Deploy the App (Cart Transform)
-9.1 Create App Skeleton (outside theme folder)
-Pick a parent directory (e.g. C:\\Projects\\mrhenry-app):
+│   └── cart-checkout-validation/
 
-(You can choose remix or php template if you prefer; node is fine.)
+│       ├── src// app root (generated by CLI: Node or “empty” template).
+
+│       │   ├── cart_validations_generate_run.js      # Main validation logicsingle-delivery-date-cart-transform (move or recreate here).
+
+│       │   ├── cart_validations_generate_run.graphql # Input query(Later) /extensions/single-delivery-date-validation/ (order or checkout validation).
+
+│       │   ├── cart_validations_generate_run.test.js # Unit testsNo need for UI, OAuth scopes minimal (Functions do not need write_products or similar unless you later add config UI).
+
+│       │   └── index.js                              # Entry point8. Clean-Up Before Starting
+
+│       ├── locales/In the theme repository right now, single-delivery-date-cart-transform is orphaned. Decide:
+
+│       │   └── en.default.json                       # Localized strings
+
+│       ├── shopify.extension.toml                    # Extension configOption 1 (Recommended): Move that folder into a newly generated app project (outside the theme repo) and remove it from the theme repo to avoid confusion.
+
+│       ├── schema.graphql                            # Shopify Functions schemaOption 2: Convert your current repo into a hybrid (theme + app). Not advised unless you want monorepo style.
+
+│       ├── package.json
+
+│       └── vite.config.js9. Step-by-Step: Create & Deploy the App (Cart Transform)
+
+├── shopify.app.toml                                  # App configuration9.1 Create App Skeleton (outside theme folder)
+
+├── PRIVACY-POLICY.md                                 # Required for distributionPick a parent directory (e.g. C:\\Projects\\mrhenry-app):
+
+├── DISTRIBUTION-SETUP.md                             # Deployment guide
+
+└── README.md                                         # This file(You can choose remix or php template if you prefer; node is fine.)
+
+```
 
 9.2 Copy / Recreate the Extension
-Inside the new app folder:
 
-CLI scaffolds a new folder under extensions.
+---Inside the new app folder:
 
-Replace the generated index.js with our logic (or copy from the theme repo’s existing folder). Ensure:
 
-shopify.function.extension.toml has type = "cart_transform" and correct api_version (e.g. 2024-07).
-Product handle constant matches actual product handle (verify in Admin → product URL slug).
-Example final index.js (keep-first strategy):
 
-(If you want “keep latest” instead: iterate the cart lines in reverse and first encountered becomes keeper.)
+## How It WorksCLI scaffolds a new folder under extensions.
 
-9.3 Test Locally
-From the app root:
+
+
+### 1. Customer Adds Items to CartReplace the generated index.js with our logic (or copy from the theme repo’s existing folder). Ensure:
+
+```
+
+✅ Adds "December 15 delivery" variantshopify.function.extension.toml has type = "cart_transform" and correct api_version (e.g. 2024-07).
+
+✅ Adds more quantity of same variantProduct handle constant matches actual product handle (verify in Admin → product URL slug).
+
+```Example final index.js (keep-first strategy):
+
+
+
+### 2. Customer Tries Multiple Dates(If you want “keep latest” instead: iterate the cart lines in reverse and first encountered becomes keeper.)
+
+```
+
+❌ Adds "December 15 delivery" variant9.3 Test Locally
+
+❌ Adds "December 22 delivery" variantFrom the app root:
+
+```
 
 Authenticate when prompted.
-CLI spins up dev environment and registers draft function.
-In your storefront (preview link output by CLI):
 
-Add variant A to cart.
-Add variant B (different date).
-Refresh cart → only variant A should remain.
-If the function isn’t running:
+### 3. Checkout AttemptCLI spins up dev environment and registers draft function.
 
-Verify extension appears under “Functions” in output.
-Check that you’re hitting the dev preview domain provided (not the live store domain).
-If using cart drawer with aggressive caching, trigger a full page reload after second add.
+```javascriptIn your storefront (preview link output by CLI):
+
+// Function executes server-side
+
+input: {Add variant A to cart.
+
+  cart: {Add variant B (different date).
+
+    lines: [Refresh cart → only variant A should remain.
+
+      { merchandise: { id: "variant-123", product: { handle: "mr-henrycherries-2kg" } } },If the function isn’t running:
+
+      { merchandise: { id: "variant-456", product: { handle: "mr-henrycherries-2kg" } } }
+
+    ]Verify extension appears under “Functions” in output.
+
+  }Check that you’re hitting the dev preview domain provided (not the live store domain).
+
+}If using cart drawer with aggressive caching, trigger a full page reload after second add.
+
 9.4 Deploy & Activate
-Then go to Admin → Settings → Functions (or directly Apps > your app > Extensions) and assign/activate the Cart Transform extension to the store.
 
-Production test:
+// Detects 2 unique variants → Returns errorThen go to Admin → Settings → Functions (or directly Apps > your app > Extensions) and assign/activate the Cart Transform extension to the store.
 
-Use live storefront (not preview) → attempt to add multiple date variants → confirm auto-prune.
-9.5 Remove Redundant Theme Folder
-Back in the theme repo, delete single-delivery-date-cart-transform (it no longer does anything theme-side). Or keep it with a README note: “Moved to app project; inert here.”
+output: {
 
-10. Adding a Validation Function (Optional Upgrade)
-Why: Provide explicit error instead of silent removal (or as a backstop).
-CLI:
+  operations: [{Production test:
+
+    validationAdd: {
+
+      errors: [{Use live storefront (not preview) → attempt to add multiple date variants → confirm auto-prune.
+
+        message: "You can only order one delivery date at a time. Please remove extra dates...",9.5 Remove Redundant Theme Folder
+
+        target: "$.cart"Back in the theme repo, delete single-delivery-date-cart-transform (it no longer does anything theme-side). Or keep it with a README note: “Moved to app project; inert here.”
+
+      }]
+
+    }10. Adding a Validation Function (Optional Upgrade)
+
+  }]Why: Provide explicit error instead of silent removal (or as a backstop).
+
+}CLI:
+
+```
 
 Replace its index.js:
 
-Deploy again:
+### 4. Shopify Displays Error
 
-Activate the validation function. Now if the transform somehow doesn’t run (or you disable it), checkout will still be blocked.
+Shopify's checkout UI shows the error message, preventing purchase completion.Deploy again:
 
-11. Configuration & Future Flexibility
+
+
+---Activate the validation function. Now if the transform somehow doesn’t run (or you disable it), checkout will still be blocked.
+
+
+
+## Development Setup11. Configuration & Future Flexibility
+
 If you anticipate changing the product handle seasonally:
 
+### Prerequisites
+
 Add a small Admin UI (embedded page) or use an app-level metafield to store the handle.
-In the function, read input.shop.metafields (if exposed via input queries—requires editing shopify.function.extension.toml input section) to avoid code redeploys.
-12. Testing Checklist
-Scenario	Expected
-Add Variant A only	Variant A remains
+
+- Node.js (v18+)In the function, read input.shop.metafields (if exposed via input queries—requires editing shopify.function.extension.toml input section) to avoid code redeploys.
+
+- Shopify CLI (`npm i -g @shopify/cli @shopify/app`)12. Testing Checklist
+
+- Shopify Partner accountScenario	Expected
+
+- Store with appropriate plan (see Distribution section)Add Variant A only	Variant A remains
+
 Add Variant A then B	B line removed (keep-first) OR A removed (if keep-latest strategy)
-Rapid add B then A (fast clicks)	Only keeper after transform settles
+
+### Local DevelopmentRapid add B then A (fast clicks)	Only keeper after transform settles
+
 Mixed date attempt then checkout	(With validation) checkout blocked or sanitized first
-Non-target products added	Unaffected
-JS disabled in browser	Server enforcement still works
-Storefront API (GraphQL) mutation adding two variants	Transform still prunes final cart content
+
+```bashNon-target products added	Unaffected
+
+# Install dependenciesJS disabled in browser	Server enforcement still works
+
+npm installStorefront API (GraphQL) mutation adding two variants	Transform still prunes final cart content
+
 13. Front-End UX Alignment
-Because Cart Transform is silent:
+
+# Build the functionBecause Cart Transform is silent:
+
+npm run shopify app function build
 
 Keep theme warning (educates user).
-Adjust message: “If a different date is added, we’ll keep only your first date. Please order again for another date.”
-Optional: Add a small note under variant selector.
-14. Logging / Observability
+
+# Run testsAdjust message: “If a different date is added, we’ll keep only your first date. Please order again for another date.”
+
+cd extensions/cart-checkout-validationOptional: Add a small note under variant selector.
+
+npm test14. Logging / Observability
+
 Functions can’t log to browser console. For debug:
 
-During dev preview, intentionally create mixed cart and confirm transform operations by re-fetching /cart.js.
-For deeper auditing in future, create an Admin app endpoint to store last transform decision (requires more infrastructure—optional).
+# Start dev server (requires dev store)
+
+shopify app devDuring dev preview, intentionally create mixed cart and confirm transform operations by re-fetching /cart.js.
+
+```For deeper auditing in future, create an Admin app endpoint to store last transform decision (requires more infrastructure—optional).
+
 15. Common Pitfalls (Windows)
-Problem	Cause	Fix
+
+### TestingProblem	Cause	Fix
+
 CLI asks for Rust toolchain	You chose a template requiring a WASM build (e.g., older function runtime). Use JS runtime (what we did) or ignore message if not needed.	
-Function doesn’t appear	Ran commands in theme repo, not app repo	Ensure you’re inside the app root folder
-Transform not applied	Using live domain but only ran shopify app dev (not deployed)	Run shopify app deploy & activate
-Mixed variants still present	Function handle mismatch	Check actual product handle slug in product admin
-Validation always blocks	Product handle mis-typed so first line not captured	Console inspect merch.product.handle in dev mode (edit function temporarily to include debug removal ops)
+
+```bashFunction doesn’t appear	Ran commands in theme repo, not app repo	Ensure you’re inside the app root folder
+
+# Run unit testsTransform not applied	Using live domain but only ran shopify app dev (not deployed)	Run shopify app deploy & activate
+
+cd extensions/cart-checkout-validationMixed variants still present	Function handle mismatch	Check actual product handle slug in product admin
+
+npm testValidation always blocks	Product handle mis-typed so first line not captured	Console inspect merch.product.handle in dev mode (edit function temporarily to include debug removal ops)
+
 16. Rollback Plan
-If transform causes confusion:
 
-Deactivate the function in Admin.
-Keep theme JavaScript warning (still prevents most misuse).
-Communicate policy in product description.
-17. Definition of Done
+# All tests should pass:If transform causes confusion:
+
+# ✓ returns an error when multiple delivery date variants are in cart
+
+# ✓ returns no errors when only one delivery date variant is in cartDeactivate the function in Admin.
+
+# ✓ returns no errors when cart has different productsKeep theme JavaScript warning (still prevents most misuse).
+
+# ✓ returns no errors for empty cartCommunicate policy in product description.
+
+```17. Definition of Done
+
 App created & deployed.
-Cart Transform active in Admin → Functions.
-Attempt to add multiple date variants ends with a single date line.
-(Optional) Validation Function blocks intentionally corrupted cart.
-README / brief (this document) stored in repo root.
-18. Quick Command Reference
-19. If You Want Me to Do the Theme Auto-Sanitize Instead
-(Already explained earlier) — ask for: “Add theme auto-sanitize keep-first” or “keep-latest” and I’ll patch custom.js.
 
-TL;DR for Future Agent
+---Cart Transform active in Admin → Functions.
+
+Attempt to add multiple date variants ends with a single date line.
+
+## Deployment(Optional) Validation Function blocks intentionally corrupted cart.
+
+README / brief (this document) stored in repo root.
+
+### 1. Build & Deploy18. Quick Command Reference
+
+19. If You Want Me to Do the Theme Auto-Sanitize Instead
+
+```bash(Already explained earlier) — ask for: “Add theme auto-sanitize keep-first” or “keep-latest” and I’ll patch custom.js.
+
+# Build function
+
+shopify app function buildTL;DR for Future Agent
+
 Theme currently enforces rule only client-side.
-Real enforcement requires an app because Functions run server-side.
-Cart Transform extension created in theme repo is inert until migrated into an app and deployed.
-Follow section 9 to spin up proper app; use section 10 to add validation if needed.
+
+# Deploy new versionReal enforcement requires an app because Functions run server-side.
+
+shopify app deployCart Transform extension created in theme repo is inert until migrated into an app and deployed.
+
+```Follow section 9 to spin up proper app; use section 10 to add validation if needed.
+
+### 2. Distribution Requirements
+
+**IMPORTANT:** This app requires **public distribution** to work on non-Plus stores.
+
+- **Custom apps:** Require Shopify Plus ($2,000+/month)
+- **Public apps (even unlisted):** Work on ALL plans including Basic/Grow ✅
+
+#### Required for Public Distribution:
+
+1. **Privacy Policy URL** (see `PRIVACY-POLICY.md`)
+2. **Support Contact** (email)
+3. **App Listing Info** (name, description)
+4. **Distribution Mode:** Public → Unlisted
+
+See `DISTRIBUTION-SETUP.md` for detailed steps.
+
+### 3. Store Installation
+
+Once approved:
+
+1. Get installation URL from Partner Dashboard
+2. Install on target store
+3. Go to **Settings → Checkout → Checkout rules**
+4. Enable **Single Delivery Date Validation**
+5. Save
+
+---
+
+## Configuration
+
+### Changing Target Product
+
+Edit `extensions/cart-checkout-validation/src/cart_validations_generate_run.js`:
+
+```javascript
+// Line 9
+const TARGET_PRODUCT_HANDLE = "mr-henrycherries-2kg";  // ← Change this
+```
+
+Then rebuild and redeploy:
+
+```bash
+shopify app function build
+shopify app deploy
+```
+
+### Customizing Error Message
+
+Edit the same file, line ~40:
+
+```javascript
+errors.push({
+  message: "Your custom error message here",
+  target: "$.cart",
+});
+```
+
+---
+
+## Important Limitations
+
+### Shopify Plus Requirement (for Custom Apps)
+
+- ❌ **Custom apps** only work on Shopify Plus
+- ✅ **Public/unlisted apps** work on ALL plans (Basic, Grow, Plus)
+- **Solution:** Use public distribution (even if unlisted/free)
+
+### What This Doesn't Prevent
+
+This function blocks checkout, but customers can still:
+- Add multiple variants to cart (theme JS prevents this too)
+- See cart with multiple variants (if they bypass theme JS)
+- They just **can't complete checkout** ✅
+
+### Complementary Protection
+
+Keep the theme-side JavaScript (`SingleDeliveryDateEnforcer`) for:
+- Better UX (prevents adding in first place)
+- Immediate feedback
+- Works as first line of defense
+
+Server-side validation = unbypassable backstop.
+
+---
+
+## Troubleshooting
+
+### "Custom app function is only eligible for shops on Shopify Plus"
+
+**Cause:** App is set to "Custom" distribution mode.
+
+**Solution:** Change to "Public" distribution (even if unlisted). See `DISTRIBUTION-SETUP.md`.
+
+### Function doesn't appear in Checkout settings
+
+**Checklist:**
+1. App installed on store? ✓
+2. Version deployed? (check Partner Dashboard)
+3. Store plan compatible? (Plus or public app)
+4. Function target correct? (`purchase.validation.run`)
+
+### Validation not blocking checkout
+
+**Debug steps:**
+1. Check function is **enabled** in Checkout settings
+2. Verify product handle matches exactly (`mr-henrycherries-2kg`)
+3. Test with actual product variants (not test products)
+4. Check browser console for GraphQL errors
+
+### Build errors
+
+```bash
+# Clear and rebuild
+rm -rf extensions/cart-checkout-validation/dist
+rm -rf extensions/cart-checkout-validation/generated
+shopify app function build
+```
+
+---
+
+## Testing Checklist
+
+- [ ] Add single variant → checkout works ✅
+- [ ] Add two different date variants → checkout blocked ❌
+- [ ] Error message displays clearly
+- [ ] Can remove one variant and proceed
+- [ ] Non-target products unaffected
+- [ ] Works with browser JS disabled
+- [ ] Works via Storefront API (GraphQL)
+
+---
+
+## Monitoring & Maintenance
+
+### Monitor Orders
+
+Check for orders that slip through (should be zero):
+
+1. Admin → Orders
+2. Filter by product: "Mr Henry Cherries"
+3. Look for orders with multiple line items of same product
+
+### Update API Version
+
+Shopify releases new API versions quarterly. Update when needed:
+
+1. Edit `extensions/cart-checkout-validation/shopify.extension.toml`
+2. Change `api_version = "2025-01"` to newer version
+3. Rebuild and deploy
+
+---
+
+## Privacy & Security
+
+- **Data Collection:** NONE
+- **Data Storage:** NONE
+- **Third-party Services:** NONE
+- **Processing:** Ephemeral (during checkout only)
+- **Compliance:** GDPR, CCPA compliant
+
+See `PRIVACY-POLICY.md` for full details.
+
+---
+
+## Support
+
+**Developer:** twentyfour.cc  
+**Contact:** bruzzi.eduardo@gmail.com
+
+For Shopify Functions documentation:
+https://shopify.dev/docs/api/functions/reference/cart-checkout-validation
+
+---
+
+## License
+
+UNLICENSED - Private client project
+
+---
+
+## Changelog
+
+### Version 6 (Current)
+- ✅ Checkout validation function implemented
+- ✅ Unit tests passing
+- ✅ Public distribution ready
+- ✅ API version: 2025-01
+- ✅ Target: `purchase.validation.run`
+
+### Previous Versions
+- v1-5: Development iterations, API version adjustments
+
+---
+
+## Future Enhancements (Optional)
+
+- [ ] Add admin UI to configure product handle without code deploy
+- [ ] Support multiple products with delivery dates
+- [ ] Localization (multi-language error messages)
+- [ ] Cart transform function (auto-remove instead of block)
+- [ ] Analytics/logging of blocked checkout attempts
